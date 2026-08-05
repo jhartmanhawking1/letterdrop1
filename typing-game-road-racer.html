@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Road Racer - Typing Practice</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    font-family: 'Trebuchet MS', 'Comic Sans MS', Verdana, sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  #game {
+    position: relative;
+    width: 100%; height: 100vh;
+    overflow: hidden;
+    background: linear-gradient(to bottom,
+      #7ec8f2 0%, #b9e6ff 21%,
+      #6fbf5a 22%, #5aa848 100%);
+  }
+  #sun {
+    position: absolute; top: 6%; left: 50%; transform: translateX(-50%);
+    width: 60px; height: 60px; border-radius: 50%;
+    background: radial-gradient(circle, #fff6c9 0%, #ffe066 70%, #ffd166 100%);
+    box-shadow: 0 0 30px rgba(255,224,102,0.6);
+    z-index: 1;
+  }
+  #road {
+    position: absolute; left: 0; bottom: 0; width: 100%; height: 79%;
+    background: #5a5a63;
+    clip-path: polygon(41% 0%, 59% 0%, 96% 100%, 4% 100%);
+    z-index: 2;
+  }
+  #roadLine {
+    position: absolute; left: 50%; bottom: 0; width: 8px; height: 79%;
+    transform: translateX(-50%);
+    background: repeating-linear-gradient(to bottom, #f4e04d 0 5%, transparent 5% 10%);
+    clip-path: polygon(46% 0%, 54% 0%, 90% 100%, 10% 100%);
+    opacity: 0.85;
+    z-index: 3;
+  }
+  #car {
+    position: absolute; left: 50%; bottom: 3%;
+    transform: translateX(-50%);
+    font-size: 56px;
+    z-index: 10;
+    transition: transform 0.15s ease;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));
+  }
+  #car.hop { animation: hop 0.3s ease; }
+  #car.swerveLeft { animation: swerveLeft 0.3s ease; }
+  #car.swerveRight { animation: swerveRight 0.3s ease; }
+  @keyframes hop {
+    0%,100% { transform: translateX(-50%) translateY(0) scale(1); }
+    40% { transform: translateX(-50%) translateY(-26px) scale(1.05); }
+  }
+  @keyframes swerveLeft {
+    0%,100% { transform: translateX(-50%) rotate(0deg); }
+    40% { transform: translateX(-85%) rotate(-12deg); }
+  }
+  @keyframes swerveRight {
+    0%,100% { transform: translateX(-50%) rotate(0deg); }
+    40% { transform: translateX(-15%) rotate(12deg); }
+  }
+
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 20px;
+    font-size: 22px; font-weight: bold; color: #24425c;
+    z-index: 20;
+  }
+  #hud .pill {
+    background: rgba(255,255,255,0.8);
+    border-radius: 20px;
+    padding: 6px 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    pointer-events: none;
+  }
+  #hud .left-group, #hud .right-group { display: flex; gap: 10px; align-items: center; }
+  #menuBtn {
+    font-size: 16px; font-weight: bold; color: #24425c;
+    background: rgba(255,255,255,0.85); border: none; border-radius: 20px;
+    padding: 8px 16px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  #menuBtn:hover { background: #fff; }
+  #lives { color: #e0455f; letter-spacing: 3px; }
+  #speedPill { color: #b5560f; }
+
+  #toolbar {
+    position: absolute; top: 62px; right: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+    z-index: 40;
+  }
+  .toolbar-btn {
+    font-size: 14px; font-weight: bold; color: #24425c;
+    background: rgba(255,255,255,0.9); border: none; border-radius: 18px;
+    padding: 8px 14px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    white-space: nowrap;
+  }
+  .toolbar-btn:hover { background: #fff; }
+
+  #authArea { margin: 4px 0 18px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  #gsiButtonContainer { display: inline-block; }
+  .auth-hint { font-size: 13px; opacity: 0.85; margin: 0; max-width: 420px; }
+  #signedInView {
+    display: none; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.85); border-radius: 20px;
+    padding: 8px 16px; color: #24425c; font-weight: bold; font-size: 15px;
+  }
+  #signOutBtn {
+    font-size: 12px; font-weight: bold; color: #24425c;
+    background: rgba(0,0,0,0.08); border: none; border-radius: 14px;
+    padding: 4px 10px; cursor: pointer;
+  }
+  #signOutBtn:hover { background: rgba(0,0,0,0.16); }
+
+  .lb-select-row {
+    display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; justify-content: center;
+  }
+  #lbLevelSelect {
+    font-size: 15px; padding: 6px 10px; border-radius: 10px; border: none; font-weight: bold;
+  }
+  .lb-sort-btn {
+    font-size: 13px; font-weight: bold; padding: 6px 14px; border-radius: 14px;
+    border: none; cursor: pointer; background: rgba(255,255,255,0.75); color: #24425c;
+  }
+  .lb-sort-btn.active { background: #ffd166; }
+  #leaderboardList {
+    width: 100%; max-width: 460px; max-height: 300px; overflow-y: auto;
+    background: rgba(255,255,255,0.15); border-radius: 14px; padding: 6px 10px;
+    margin-bottom: 10px;
+  }
+  .lb-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,0.2); font-size: 15px;
+  }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-rank { width: 32px; font-weight: bold; opacity: 0.8; }
+  .lb-name { flex: 1; text-align: left; }
+  .lb-score, .lb-aascore { width: 76px; text-align: right; font-weight: bold; }
+  .lb-header { opacity: 0.75; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .approaching {
+    position: absolute;
+    left: 50%; top: 20%;
+    transform: translate(-50%, -50%) scale(0.3);
+    z-index: 5;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .item-box {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 8px 16px;
+    border-radius: 14px;
+    font-weight: bold;
+    font-size: 34px;
+    border: 5px solid #d94f4f;
+    background: rgba(233,110,110,0.35);
+    color: #40200f;
+    transition: border-color 0.1s linear, background-color 0.1s linear;
+  }
+  .item-box .word-text .typed { color: #1c5c2e; text-shadow: 0 0 2px rgba(255,255,255,0.6); }
+  .item-box.obstacle {
+    font-size: 20px;
+    padding: 10px 22px;
+    min-width: 140px;
+    text-align: center;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+  .item-box.shake { animation: itemShake 0.15s; }
+  @keyframes itemShake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+
+  #crashFlash {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(217, 60, 60, 0.35);
+    z-index: 15; opacity: 0; pointer-events: none;
+  }
+  #crashFlash.show { animation: flash 0.4s ease; }
+  @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+  .overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(20,40,60,0.6);
+    color: white; text-align: center; z-index: 30;
+    padding: 20px;
+  }
+  .overlay h1 { font-size: 42px; margin-bottom: 6px; text-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+  .overlay p.sub { font-size: 18px; margin: 4px 0 20px; max-width: 640px; opacity: 0.9; }
+  button.big {
+    margin-top: 20px;
+    font-size: 24px;
+    padding: 12px 32px;
+    border: none;
+    border-radius: 30px;
+    background: #ffd166;
+    color: #4a3200;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  }
+  button.big:hover { background: #ffdd85; }
+  button.big.secondary { background: #a9d6ff; color: #143a5e; margin-left: 12px; }
+  button.big.secondary:hover { background: #c2e3ff; }
+  #btnRow { display: flex; }
+
+  #levelGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(150px, 210px));
+    gap: 16px;
+    margin-top: 10px;
+  }
+  .level-card {
+    position: relative;
+    background: rgba(255,255,255,0.92);
+    border-radius: 16px;
+    padding: 16px 12px;
+    cursor: pointer;
+    color: #24425c;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    border: 3px solid transparent;
+    transition: transform 0.1s ease;
+  }
+  .level-card:hover { transform: scale(1.05); border-color: #ffd166; }
+  .level-card.letters { border-top: 6px solid #4d9de0; }
+  .level-card.words { border-top: 6px solid #8a5fd6; }
+  .level-card .lv-num { font-size: 14px; font-weight: bold; opacity: 0.7; }
+  .level-card .lv-title { font-size: 19px; font-weight: bold; margin: 4px 0; }
+  .level-card .lv-detail { font-size: 13px; opacity: 0.85; line-height: 1.3; }
+  .level-card .lv-best {
+    margin-top: 8px; font-size: 13px; font-weight: bold;
+    color: #b5560f; background: #fff3e0; border-radius: 10px;
+    padding: 3px 8px; display: inline-block;
+  }
+
+  #levelBanner {
+    position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 46px; color: #fff; font-weight: bold;
+    text-shadow: 0 3px 6px rgba(0,0,0,0.4);
+    z-index: 25; opacity: 0; pointer-events: none;
+    text-align: center;
+  }
+  #levelBanner.show { animation: bannerPop 1.4s forwards; }
+  @keyframes bannerPop {
+    0% { opacity: 0; transform: translate(-50%,-50%) scale(0.6); }
+    20% { opacity: 1; transform: translate(-50%,-50%) scale(1.1); }
+    35% { transform: translate(-50%,-50%) scale(1); }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  #targetHint {
+    position: absolute; bottom: 14%; left: 50%; transform: translateX(-50%);
+    font-size: 18px; color: #24425c; background: rgba(255,255,255,0.75);
+    padding: 6px 16px; border-radius: 16px; z-index: 15;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="sun"></div>
+  <div id="road"></div>
+  <div id="roadLine"></div>
+  <div id="crashFlash"></div>
+
+  <div id="hud">
+    <div class="left-group">
+      <button id="menuBtn">☰ Choose Level</button>
+    </div>
+    <div class="right-group">
+      <div class="pill">Level <span id="levelNum">1</span></div>
+      <div class="pill">Score: <span id="score">0</span></div>
+      <div class="pill" id="speedPill">Speed: <span id="speedVal">0</span></div>
+      <div class="pill" id="lives">&#10084;&#10084;&#10084;</div>
+    </div>
+  </div>
+
+  <div id="toolbar">
+    <button id="leaderboardBtn" class="toolbar-btn">🏆 Leaderboard</button>
+  </div>
+
+  <div id="levelBanner"></div>
+  <div id="targetHint"></div>
+  <div id="car">🚗</div>
+
+  <div class="overlay" id="levelSelectScreen">
+    <h1>Road Racer</h1>
+    <p class="sub">Letters and words grow bigger as you drive toward them — type them before they reach you to turn them green and drive on through! Watch for SPACE (jump) and SHIFT (swerve) blocks too.</p>
+
+    <div id="authArea">
+      <div id="signedOutView">
+        <div id="gsiButtonContainer"></div>
+        <p class="auth-hint" id="authHint">Sign in with your school Google account to put your scores on the class leaderboard!</p>
+      </div>
+      <div id="signedInView">
+        <span id="signedInName"></span>
+        <button id="signOutBtn">Sign Out</button>
+      </div>
+    </div>
+
+    <div id="levelGrid"></div>
+  </div>
+
+  <div class="overlay" id="gameOverScreen" style="display:none;">
+    <h1>Nice Driving!</h1>
+    <p class="sub" id="finalStats"></p>
+    <p class="sub" id="submitStatus" style="font-size:15px; margin-top:0;"></p>
+    <div id="btnRow">
+      <button class="big" id="playAgainBtn">Play This Level Again</button>
+      <button class="big secondary" id="chooseLevelBtn">Choose Level</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="leaderboardScreen" style="display:none;">
+    <h1>🏆 Leaderboard</h1>
+    <div class="lb-select-row">
+      <select id="lbLevelSelect"></select>
+      <button class="lb-sort-btn" id="lbSortScore">Top Score</button>
+      <button class="lb-sort-btn" id="lbSortAccuracy">Top Accuracy-Adjusted</button>
+    </div>
+    <div class="lb-row lb-header">
+      <span class="lb-rank">#</span>
+      <span class="lb-name">Name</span>
+      <span class="lb-score">Score</span>
+      <span class="lb-aascore">Adj. Score</span>
+    </div>
+    <div id="leaderboardList"><p>Loading...</p></div>
+    <button class="big secondary" id="lbBackBtn">Back</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  // =========================================================
+  // CLASS LEADERBOARD CONFIG
+  // Shares the same Google Sheet / Apps Script backend as Letter Drop —
+  // just reuse the same Client ID and Apps Script URL from that file.
+  // GAME_TAG keeps this game's scores separate from Letter Drop's even
+  // though they're both stored in the same sheet.
+  // =========================================================
+  var LEADERBOARD_CONFIG = {
+    GOOGLE_CLIENT_ID: "334444019921-16rcf5jleptom8k7cb115qvjiee4h68b.apps.googleusercontent.com",
+    ALLOWED_DOMAIN: "hawkingcharter.org",
+    APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw0RKEoNRVFnjw08bt3pu2tN1Gpk0d7g-vXgIF6rTCOOwztWow8e2tNPdDbMJvml1NGDg/exec"
+  };
+  var GAME_TAG = "roadRacer";
+  var leaderboardConfigured =
+    LEADERBOARD_CONFIG.GOOGLE_CLIENT_ID.indexOf("PASTE-YOUR") === -1 &&
+    LEADERBOARD_CONFIG.APPS_SCRIPT_URL.indexOf("PASTE-YOUR") === -1;
+
+  // =========================================================
+  // SIGHT WORD LIST (placeholder — Dolch 2nd grade list).
+  // Replace this array with your class's official word list.
+  // Words are auto-sorted into easy/mixed/hard buckets below
+  // based on which letters they contain.
+  // =========================================================
+  var sightWords = [
+    "always","around","because","been","before","best","both","buy",
+    "call","cold","does","fast","first","five","found","gave","goes",
+    "green","its","made","many","off","or","pull","read","right","sing",
+    "sit","sleep","tell","their","these","those","upon","us","use",
+    "very","wash","which","why","wish","work","would","write","your"
+  ];
+
+  var TIER_HOME = ["a","s","d","f","j","k","l"];
+  var TIER_FREQUENT = ["e","r","t","n","i","o","h","g","u"];
+  var TIER_REMAINING = ["b","c","m","p","q","v","w","x","y","z"];
+  var FULL_ALPHABET = TIER_HOME.concat(TIER_FREQUENT, TIER_REMAINING);
+
+  function letterTierIndex(ch) {
+    ch = ch.toLowerCase();
+    if (TIER_HOME.indexOf(ch) !== -1) return 0;
+    if (TIER_FREQUENT.indexOf(ch) !== -1) return 1;
+    return 2;
+  }
+  function wordDifficulty(word) {
+    var max = 0;
+    for (var i = 0; i < word.length; i++) max = Math.max(max, letterTierIndex(word[i]));
+    return max;
+  }
+  function bucketWords(list) {
+    var easy = [], hard = [];
+    list.forEach(function (w) {
+      var d = wordDifficulty(w);
+      if (d <= 1) easy.push(w);
+      if (d === 2 || w.length >= 6) hard.push(w);
+    });
+    if (easy.length < 4) easy = list.slice();
+    if (hard.length < 4) hard = list.slice();
+    return { easy: easy, mixed: list.slice(), hard: hard };
+  }
+  var wordBuckets = bucketWords(sightWords);
+
+  // =========================================================
+  // LEVEL CONFIG
+  //   baseSpeed = 1 / (seconds to travel from horizon to car)
+  //   growth    = multiplier on speed after every correct clear
+  //   baseSpawnInterval = starting delay (ms) between spawns
+  //   maxConcurrent = lanes available for letters/words (fixed at 3)
+  // =========================================================
+  var MAX_SPEED = 1.15;
+  var MIN_SPAWN_DELAY = 500;
+  var NUM_LANES = 3;
+  var LANE_X = [30, 50, 70]; // percent of road width at the player's position
+  var OBSTACLE_CHANCE = 0.25;
+
+  var levels = [
+    { type: "letter", pool: TIER_HOME, baseSpeed: 1/7.0, growth: 1.05, baseSpawnInterval: 1500, maxConcurrent: NUM_LANES, label: "Home Row", keysLabel: TIER_HOME.join(" ").toUpperCase() },
+    { type: "letter", pool: TIER_HOME.concat(TIER_FREQUENT), baseSpeed: 1/5.5, growth: 1.05, baseSpawnInterval: 1400, maxConcurrent: NUM_LANES, label: "Home Row + Frequent Keys", keysLabel: "Adds " + TIER_FREQUENT.join(" ").toUpperCase() },
+    { type: "letter", pool: FULL_ALPHABET, baseSpeed: 1/4.3, growth: 1.05, baseSpawnInterval: 1300, maxConcurrent: NUM_LANES, label: "All Letters", keysLabel: "Adds " + TIER_REMAINING.join(" ").toUpperCase() },
+    { type: "word", tier: "easy", baseSpeed: 1/6.5, growth: 1.045, baseSpawnInterval: 1900, maxConcurrent: NUM_LANES, label: "Easy Sight Words", keysLabel: "Words using home row + frequent letters" },
+    { type: "word", tier: "mixed", baseSpeed: 1/5.2, growth: 1.045, baseSpawnInterval: 1800, maxConcurrent: NUM_LANES, label: "Mixed Sight Words", keysLabel: "All sight words" },
+    { type: "word", tier: "hard", baseSpeed: 1/4.3, growth: 1.045, baseSpawnInterval: 1700, maxConcurrent: NUM_LANES, label: "Challenge Words", keysLabel: "Longer words with rarer letters" }
+  ];
+
+  var OBSTACLE_TYPES = [
+    { kind: "jump", label: "SPACE\n⬆ JUMP", color: "#e08a2b", keyMatches: function (e) { return e.code === "Space"; } },
+    { kind: "shiftLeft", label: "⬅ SHIFT", color: "#3a7bd5", keyMatches: function (e) { return e.code === "ShiftLeft"; } },
+    { kind: "shiftRight", label: "SHIFT ➡", color: "#8a5fd6", keyMatches: function (e) { return e.code === "ShiftRight"; } }
+  ];
+
+  var HIGH_SCORE_PREFIX = "roadRacerHighScore_";
+  var memoryScores = {};
+  function getHighScore(levelIdx) {
+    try {
+      var v = window.localStorage.getItem(HIGH_SCORE_PREFIX + levelIdx);
+      return v ? parseInt(v, 10) : 0;
+    } catch (e) { return memoryScores[levelIdx] || 0; }
+  }
+  function setHighScore(levelIdx, value) {
+    try { window.localStorage.setItem(HIGH_SCORE_PREFIX + levelIdx, String(value)); }
+    catch (e) { memoryScores[levelIdx] = value; }
+  }
+
+  var game = document.getElementById("game");
+  var car = document.getElementById("car");
+  var levelNumEl = document.getElementById("levelNum");
+  var scoreEl = document.getElementById("score");
+  var speedValEl = document.getElementById("speedVal");
+  var livesEl = document.getElementById("lives");
+  var levelBanner = document.getElementById("levelBanner");
+  var targetHint = document.getElementById("targetHint");
+  var levelSelectScreen = document.getElementById("levelSelectScreen");
+  var gameOverScreen = document.getElementById("gameOverScreen");
+  var finalStats = document.getElementById("finalStats");
+  var levelGrid = document.getElementById("levelGrid");
+  var crashFlash = document.getElementById("crashFlash");
+  var leaderboardBtn = document.getElementById("leaderboardBtn");
+  var signedOutView = document.getElementById("signedOutView");
+  var signedInView = document.getElementById("signedInView");
+  var signedInName = document.getElementById("signedInName");
+  var authHint = document.getElementById("authHint");
+  var submitStatus = document.getElementById("submitStatus");
+  var leaderboardScreen = document.getElementById("leaderboardScreen");
+  var lbLevelSelect = document.getElementById("lbLevelSelect");
+  var leaderboardList = document.getElementById("leaderboardList");
+  var lbSortScoreBtn = document.getElementById("lbSortScore");
+  var lbSortAccuracyBtn = document.getElementById("lbSortAccuracy");
+
+  // =========================================================
+  // GOOGLE SIGN-IN + LEADERBOARD
+  // =========================================================
+  var authState = { idToken: null, email: null, name: null, domainOk: false };
+  var currentLbLevel = 0;
+  var currentLbSort = "score"; // "score" or "accuracyAdjusted"
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function decodeJwtPayload(token) {
+    try {
+      var base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      var json = decodeURIComponent(
+        atob(base64).split("").map(function (c) {
+          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join("")
+      );
+      return JSON.parse(json);
+    } catch (e) { return null; }
+  }
+
+  function updateAuthUi() {
+    if (authState.idToken && authState.domainOk) {
+      signedOutView.style.display = "none";
+      signedInView.style.display = "flex";
+      signedInName.textContent = "👋 " + authState.name;
+    } else {
+      signedOutView.style.display = "block";
+      signedInView.style.display = "none";
+      authHint.textContent = authState.idToken && !authState.domainOk
+        ? "That account isn't part of our school domain, so scores can't be saved to the leaderboard. Try signing in with your school account."
+        : "Sign in with your school Google account to put your scores on the class leaderboard!";
+    }
+  }
+
+  function handleCredentialResponse(response) {
+    var payload = decodeJwtPayload(response.credential);
+    if (!payload) return;
+    var email = (payload.email || "").toLowerCase();
+    var domainOk = email.indexOf("@" + LEADERBOARD_CONFIG.ALLOWED_DOMAIN.toLowerCase()) ===
+      email.length - (LEADERBOARD_CONFIG.ALLOWED_DOMAIN.length + 1);
+    var name = payload.given_name || payload.name || "Player";
+    if (payload.family_name) name += " " + payload.family_name.charAt(0).toUpperCase() + ".";
+    authState = { idToken: response.credential, email: email, name: name, domainOk: domainOk };
+    updateAuthUi();
+  }
+
+  function signOut() {
+    authState = { idToken: null, email: null, name: null, domainOk: false };
+    if (window.google && google.accounts && google.accounts.id) {
+      google.accounts.id.disableAutoSelect();
+    }
+    updateAuthUi();
+  }
+
+  function initGoogleSignIn() {
+    if (!leaderboardConfigured) {
+      authHint.textContent = "Ask your teacher to finish setting up the leaderboard.";
+      return;
+    }
+    if (!window.google || !google.accounts || !google.accounts.id) return;
+    google.accounts.id.initialize({
+      client_id: LEADERBOARD_CONFIG.GOOGLE_CLIENT_ID,
+      hd: LEADERBOARD_CONFIG.ALLOWED_DOMAIN,
+      callback: handleCredentialResponse
+    });
+    google.accounts.id.renderButton(document.getElementById("gsiButtonContainer"), {
+      theme: "outline", size: "large", text: "signin_with"
+    });
+  }
+
+  function waitForGsi(attemptsLeft) {
+    if (window.google && google.accounts && google.accounts.id) {
+      initGoogleSignIn();
+      return;
+    }
+    if (attemptsLeft > 0) setTimeout(function () { waitForGsi(attemptsLeft - 1); }, 200);
+  }
+
+  function submitScoreToLeaderboard(levelIdx, score, accuracyAdjustedScore, accuracy, topSpeed) {
+    if (!leaderboardConfigured) { submitStatus.textContent = ""; return; }
+    if (!authState.idToken || !authState.domainOk) {
+      submitStatus.textContent = "Sign in from the level-select screen to save scores to the leaderboard.";
+      return;
+    }
+    var level = levels[levelIdx];
+    var payload = {
+      idToken: authState.idToken,
+      game: GAME_TAG,
+      levelIndex: levelIdx,
+      levelLabel: level.label,
+      score: score,
+      accuracyAdjustedScore: accuracyAdjustedScore,
+      accuracy: accuracy,
+      topSpeed: Math.round(topSpeed)
+    };
+    submitStatus.textContent = "Saving to the leaderboard...";
+    fetch(LEADERBOARD_CONFIG.APPS_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    }).then(function () {
+      submitStatus.textContent = "Saved to the class leaderboard as " + authState.name + "!";
+    }).catch(function () {
+      submitStatus.textContent = "Couldn't reach the leaderboard right now — your local high score is still saved.";
+    });
+  }
+
+  function populateLbLevelSelect(selectedIdx) {
+    lbLevelSelect.innerHTML = "";
+    levels.forEach(function (lvl, idx) {
+      var opt = document.createElement("option");
+      opt.value = String(idx);
+      opt.textContent = "Level " + (idx + 1) + ": " + lvl.label;
+      lbLevelSelect.appendChild(opt);
+    });
+    lbLevelSelect.value = String(selectedIdx);
+  }
+
+  function renderLeaderboard(entries) {
+    if (!entries || !entries.length) {
+      leaderboardList.innerHTML = "<p>No scores yet — be the first!</p>";
+      return;
+    }
+    var html = "";
+    entries.forEach(function (e, i) {
+      html += '<div class="lb-row">' +
+        '<span class="lb-rank">#' + (i + 1) + "</span>" +
+        '<span class="lb-name">' + escapeHtml(e.name) + "</span>" +
+        '<span class="lb-score">' + e.score + "</span>" +
+        '<span class="lb-aascore">' + e.accuracyAdjustedScore + "</span>" +
+        "</div>";
+    });
+    leaderboardList.innerHTML = html;
+  }
+
+  function loadLeaderboard() {
+    if (!leaderboardConfigured) {
+      leaderboardList.innerHTML = "<p>The leaderboard isn't set up yet. Ask your teacher!</p>";
+      return;
+    }
+    leaderboardList.innerHTML = "<p>Loading...</p>";
+    var url = LEADERBOARD_CONFIG.APPS_SCRIPT_URL +
+      "?action=leaderboard&game=" + GAME_TAG + "&level=" + currentLbLevel + "&sort=" + currentLbSort + "&limit=10";
+    fetch(url)
+      .then(function (r) { return r.json(); })
+      .then(function (data) { renderLeaderboard(data.entries); })
+      .catch(function () {
+        leaderboardList.innerHTML = "<p>Couldn't load the leaderboard right now. Try again in a bit.</p>";
+      });
+  }
+
+  function updateLbSortButtons() {
+    lbSortScoreBtn.classList.toggle("active", currentLbSort === "score");
+    lbSortAccuracyBtn.classList.toggle("active", currentLbSort === "accuracyAdjusted");
+  }
+
+  function openLeaderboard(defaultLevelIdx) {
+    state.running = false;
+    stopTimers();
+    clearAllActive();
+    gameOverScreen.style.display = "none";
+    levelSelectScreen.style.display = "none";
+    currentLbLevel = defaultLevelIdx;
+    populateLbLevelSelect(currentLbLevel);
+    updateLbSortButtons();
+    leaderboardScreen.style.display = "flex";
+    loadLeaderboard();
+  }
+
+  var state = {
+    levelIndex: 0,
+    startLevelIndex: 0,
+    score: 0,
+    lives: 3,
+    currentSpeed: 0,
+    totalCorrect: 0,
+    totalMissed: 0,
+    activeItems: [],
+    lockedItem: null,
+    running: false,
+    lastTime: null,
+    spawnTimeout: null
+  };
+
+  function pickWord(list) { return list[Math.floor(Math.random() * list.length)]; }
+  function currentLevel() { return levels[Math.min(state.levelIndex, levels.length - 1)]; }
+  function wordPoolFor(level) { return wordBuckets[level.tier] || wordBuckets.mixed; }
+
+  function updateHud() {
+    levelNumEl.textContent = state.levelIndex + 1;
+    scoreEl.textContent = state.score;
+    speedValEl.textContent = Math.round(state.currentSpeed * 100);
+    var hearts = "";
+    for (var i = 0; i < state.lives; i++) hearts += "❤";
+    livesEl.textContent = hearts;
+  }
+
+  function showLevelBanner(text) {
+    levelBanner.textContent = text;
+    levelBanner.classList.remove("show");
+    void levelBanner.offsetWidth;
+    levelBanner.classList.add("show");
+  }
+
+  function stopTimers() {
+    if (state.spawnTimeout) { clearTimeout(state.spawnTimeout); state.spawnTimeout = null; }
+  }
+
+  function renderWordText(text, typedCount) {
+    var html = "";
+    for (var i = 0; i < text.length; i++) {
+      html += (i < typedCount) ? '<span class="typed">' + text[i] + "</span>" : text[i];
+    }
+    return html;
+  }
+
+  // Interpolates from red (t=0) to green (t=1)
+  function colorForProgress(t) {
+    t = Math.max(0, Math.min(1, t));
+    var r1 = 217, g1 = 79, b1 = 79;   // red
+    var r2 = 46, g2 = 138, b2 = 74;   // green
+    var r = Math.round(r1 + (r2 - r1) * t);
+    var g = Math.round(g1 + (g2 - g1) * t);
+    var b = Math.round(b1 + (b2 - b1) * t);
+    return "rgb(" + r + "," + g + "," + b + ")";
+  }
+
+  function applyProgressColor(item) {
+    var frac = item.kind === "letter" || item.kind === "word"
+      ? item.typed / item.text.length
+      : (item.cleared ? 1 : 0);
+    var borderColor = colorForProgress(frac);
+    item.boxEl.style.borderColor = borderColor;
+    item.boxEl.style.backgroundColor = colorForProgress(frac * 0.6).replace("rgb", "rgba").replace(")", ",0.35)");
+  }
+
+  function pickFreeLane() {
+    var occupied = state.activeItems.filter(function (it) { return it.kind === "letter" || it.kind === "word"; })
+      .map(function (it) { return it.lane; });
+    var free = [];
+    for (var i = 0; i < NUM_LANES; i++) if (occupied.indexOf(i) === -1) free.push(i);
+    return free.length ? free[Math.floor(Math.random() * free.length)] : Math.floor(Math.random() * NUM_LANES);
+  }
+
+  function spawnWordItem() {
+    var level = currentLevel();
+    var text = level.type === "letter" ? pickWord(level.pool) : pickWord(wordPoolFor(level));
+    var lane = pickFreeLane();
+
+    var wrap = document.createElement("div");
+    wrap.className = "approaching";
+    var box = document.createElement("div");
+    box.className = "item-box";
+    box.innerHTML = '<span class="word-text">' + renderWordText(text, 0) + "</span>";
+    wrap.appendChild(box);
+    game.appendChild(wrap);
+
+    var item = {
+      kind: level.type, text: text, typed: 0, d: 1, speed: state.currentSpeed,
+      lane: lane, el: wrap, boxEl: box
+    };
+    state.activeItems.push(item);
+    applyProgressColor(item);
+    return item;
+  }
+
+  function spawnObstacleItem() {
+    var type = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)];
+    var wrap = document.createElement("div");
+    wrap.className = "approaching";
+    var box = document.createElement("div");
+    box.className = "item-box obstacle";
+    box.style.background = type.color;
+    box.style.borderColor = "#d94f4f";
+    box.textContent = type.label;
+    wrap.appendChild(box);
+    game.appendChild(wrap);
+
+    var item = {
+      kind: type.kind, cleared: false, d: 1, speed: state.currentSpeed,
+      lane: 1, el: wrap, boxEl: box, obstacleType: type
+    };
+    state.activeItems.push(item);
+    return item;
+  }
+
+  function computeSpawnDelay(level) {
+    var ratio = level.baseSpeed / Math.max(0.01, state.currentSpeed);
+    return Math.max(MIN_SPAWN_DELAY, level.baseSpawnInterval * ratio);
+  }
+
+  function spawnLoopTick() {
+    if (!state.running) return;
+    var level = currentLevel();
+    var wordCount = state.activeItems.filter(function (it) { return it.kind === "letter" || it.kind === "word"; }).length;
+    var obstacleCount = state.activeItems.filter(function (it) { return it.kind !== "letter" && it.kind !== "word"; }).length;
+
+    if (obstacleCount === 0 && Math.random() < OBSTACLE_CHANCE) {
+      spawnObstacleItem();
+    } else if (wordCount < level.maxConcurrent) {
+      spawnWordItem();
+    }
+    state.spawnTimeout = setTimeout(spawnLoopTick, computeSpawnDelay(level));
+  }
+
+  function removeItem(item) {
+    if (state.lockedItem === item) state.lockedItem = null;
+    var idx = state.activeItems.indexOf(item);
+    if (idx !== -1) state.activeItems.splice(idx, 1);
+  }
+
+  function clearAllActive() {
+    state.activeItems.forEach(function (it) { it.el.remove(); });
+    state.activeItems = [];
+    state.lockedItem = null;
+  }
+
+  function bumpCar(className) {
+    car.classList.remove("hop", "swerveLeft", "swerveRight");
+    void car.offsetWidth;
+    car.classList.add(className);
+    setTimeout(function () { car.classList.remove(className); }, 320);
+  }
+
+  function completeItem(item) {
+    var level = currentLevel();
+    var points;
+    if (item.kind === "letter") points = 10;
+    else if (item.kind === "word") points = 10 + item.text.length * 3;
+    else points = 8;
+
+    state.score += points;
+    state.totalCorrect++;
+    state.currentSpeed = Math.min(MAX_SPEED, state.currentSpeed * level.growth);
+
+    if (item.kind === "jump") bumpCar("hop");
+    else if (item.kind === "shiftLeft") bumpCar("swerveLeft");
+    else if (item.kind === "shiftRight") bumpCar("swerveRight");
+
+    item.boxEl.style.borderColor = colorForProgress(1);
+    item.boxEl.style.backgroundColor = "rgba(46,138,74,0.4)";
+    removeItem(item);
+    var el = item.el;
+    setTimeout(function () { el.remove(); }, 200);
+    updateHud();
+  }
+
+  function crashItem(item) {
+    item.el.remove();
+    removeItem(item);
+    state.lives--;
+    state.totalMissed++;
+    crashFlash.classList.remove("show");
+    void crashFlash.offsetWidth;
+    crashFlash.classList.add("show");
+    updateHud();
+    if (state.lives <= 0) endGame();
+  }
+
+  function endGame() {
+    state.running = false;
+    stopTimers();
+    clearAllActive();
+    var accuracy = state.totalCorrect + state.totalMissed > 0
+      ? Math.round(100 * state.totalCorrect / (state.totalCorrect + state.totalMissed))
+      : 100;
+    var accuracyAdjustedScore = Math.round(state.score * (accuracy / 100));
+
+    var levelIdx = state.startLevelIndex;
+    var prevBest = getHighScore(levelIdx);
+    var isNewBest = state.score > prevBest;
+    if (isNewBest) setHighScore(levelIdx, state.score);
+    var bestLine = isNewBest ? "New High Score for this level!" : "Best for this level: " + prevBest;
+
+    finalStats.innerHTML = "Score: " + state.score +
+      " | Top speed reached: " + Math.round(state.currentSpeed * 100) +
+      " | Accuracy: " + accuracy + "%<br>" +
+      "Accuracy-Adjusted Score: " + accuracyAdjustedScore + "<br>" + bestLine;
+
+    gameOverScreen.style.display = "flex";
+    currentLbLevel = levelIdx; // so the leaderboard button defaults to the level just played
+    submitScoreToLeaderboard(levelIdx, state.score, accuracyAdjustedScore, accuracy, state.currentSpeed);
+  }
+
+  function gameLoop(timestamp) {
+    if (!state.running) return;
+    if (state.lastTime === null) state.lastTime = timestamp;
+    var dt = (timestamp - state.lastTime) / 1000;
+    state.lastTime = timestamp;
+
+    var items = state.activeItems.slice();
+    for (var i = 0; i < items.length; i++) {
+      if (!state.running) break;
+      var it = items[i];
+      it.d -= it.speed * dt;
+      var t = 1 - Math.max(0, it.d);
+      var ease = t * t;
+      var scale = 0.3 + 1.4 * ease;
+      var yPct = 20 + (80 - 20) * ease;
+      var laneX = (it.kind === "letter" || it.kind === "word") ? LANE_X[it.lane] : 50;
+      var xPct = 50 + (laneX - 50) * ease;
+
+      it.el.style.left = xPct + "%";
+      it.el.style.top = yPct + "%";
+      it.el.style.transform = "translate(-50%, -50%) scale(" + scale.toFixed(3) + ")";
+
+      if (it.d <= 0) {
+        var done = (it.kind === "letter" || it.kind === "word")
+          ? it.typed >= it.text.length
+          : it.cleared;
+        if (done) completeItem(it); else crashItem(it);
+      }
+    }
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  function tryAdvanceWord(item, key) {
+    var expected = item.text[item.typed];
+    if (key.toLowerCase() === expected.toLowerCase()) {
+      item.typed++;
+      item.boxEl.querySelector(".word-text").innerHTML = renderWordText(item.text, item.typed);
+      applyProgressColor(item);
+      if (item.typed >= item.text.length) completeItem(item);
+    } else {
+      item.boxEl.classList.remove("shake");
+      void item.boxEl.offsetWidth;
+      item.boxEl.classList.add("shake");
+    }
+  }
+
+  function handleKey(e) {
+    if (!state.running) return;
+
+    // Obstacle keys first — these never conflict with letter matching.
+    for (var i = 0; i < OBSTACLE_TYPES.length; i++) {
+      var type = OBSTACLE_TYPES[i];
+      if (type.keyMatches(e)) {
+        e.preventDefault();
+        var match = state.activeItems.find ? state.activeItems.find(function (it) { return it.kind === type.kind && !it.cleared; })
+          : (function () {
+              for (var j = 0; j < state.activeItems.length; j++) {
+                if (state.activeItems[j].kind === type.kind && !state.activeItems[j].cleared) return state.activeItems[j];
+              }
+              return null;
+            })();
+        if (match) {
+          match.cleared = true;
+          completeItem(match);
+        } else {
+          bumpCar(type.kind === "jump" ? "hop" : type.kind === "shiftLeft" ? "swerveLeft" : "swerveRight");
+        }
+        return;
+      }
+    }
+
+    var key = e.key;
+    if (key.length !== 1) return;
+
+    if (state.lockedItem) {
+      tryAdvanceWord(state.lockedItem, key);
+      return;
+    }
+
+    var candidates = state.activeItems.filter(function (it) {
+      return (it.kind === "letter" || it.kind === "word") && it.typed === 0 && it.text[0].toLowerCase() === key.toLowerCase();
+    });
+    if (candidates.length === 0) return;
+
+    candidates.sort(function (a, b) { return a.d - b.d; }); // smallest d = closest to the car = most urgent
+    var chosen = candidates[0];
+    state.lockedItem = chosen;
+    tryAdvanceWord(chosen, key);
+  }
+
+  function buildLevelGrid() {
+    levelGrid.innerHTML = "";
+    levels.forEach(function (lvl, idx) {
+      var best = getHighScore(idx);
+      var card = document.createElement("div");
+      card.className = "level-card " + (lvl.type === "letter" ? "letters" : "words");
+      card.innerHTML =
+        '<div class="lv-num">LEVEL ' + (idx + 1) + '</div>' +
+        '<div class="lv-title">' + lvl.label + '</div>' +
+        '<div class="lv-detail">' + lvl.keysLabel + '</div>' +
+        (best > 0 ? '<div class="lv-best">Best: ' + best + '</div>' : '');
+      card.addEventListener("click", function () { startGame(idx); });
+      levelGrid.appendChild(card);
+    });
+  }
+
+  function showLevelSelect() {
+    state.running = false;
+    stopTimers();
+    clearAllActive();
+    gameOverScreen.style.display = "none";
+    leaderboardScreen.style.display = "none";
+    buildLevelGrid();
+    levelSelectScreen.style.display = "flex";
+  }
+
+  function startGame(levelIdx) {
+    var level = levels[levelIdx];
+    state.levelIndex = levelIdx;
+    state.startLevelIndex = levelIdx;
+    state.score = 0;
+    state.lives = 3;
+    state.currentSpeed = level.baseSpeed;
+    state.totalCorrect = 0;
+    state.totalMissed = 0;
+    state.lastTime = null;
+    state.running = true;
+    stopTimers();
+    clearAllActive();
+    levelSelectScreen.style.display = "none";
+    gameOverScreen.style.display = "none";
+    leaderboardScreen.style.display = "none";
+    submitStatus.textContent = "";
+    updateHud();
+    showLevelBanner("Level " + (levelIdx + 1) + ": " + level.label);
+    targetHint.textContent = level.type === "letter"
+      ? "Type letters to turn them green — watch for SPACE and SHIFT blocks!"
+      : "Type whole words to turn them green — watch for SPACE and SHIFT blocks!";
+    state.spawnTimeout = setTimeout(spawnLoopTick, 900);
+    requestAnimationFrame(gameLoop);
+  }
+
+  document.getElementById("menuBtn").addEventListener("click", showLevelSelect);
+  document.getElementById("playAgainBtn").addEventListener("click", function () { startGame(state.startLevelIndex); });
+  document.getElementById("chooseLevelBtn").addEventListener("click", showLevelSelect);
+  document.addEventListener("keydown", handleKey);
+
+  document.getElementById("signOutBtn").addEventListener("click", signOut);
+  leaderboardBtn.addEventListener("click", function () { openLeaderboard(currentLbLevel); });
+  document.getElementById("lbBackBtn").addEventListener("click", showLevelSelect);
+  lbLevelSelect.addEventListener("change", function () {
+    currentLbLevel = parseInt(lbLevelSelect.value, 10);
+    loadLeaderboard();
+  });
+  lbSortScoreBtn.addEventListener("click", function () {
+    currentLbSort = "score";
+    updateLbSortButtons();
+    loadLeaderboard();
+  });
+  lbSortAccuracyBtn.addEventListener("click", function () {
+    currentLbSort = "accuracyAdjusted";
+    updateLbSortButtons();
+    loadLeaderboard();
+  });
+
+  buildLevelGrid();
+  updateHud();
+  updateAuthUi();
+  waitForGsi(25);
+})();
+</script>
+</body>
+</html>
