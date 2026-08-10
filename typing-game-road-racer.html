@@ -195,6 +195,7 @@
   }
   .overlay h1 { font-size: 42px; margin-bottom: 6px; text-shadow: 0 2px 4px rgba(0,0,0,0.4); }
   .overlay p.sub { font-size: 18px; margin: 4px 0 20px; max-width: 640px; opacity: 0.9; }
+  .end-reason { font-weight: 700; color: #ffd166; margin-bottom: 8px; font-size: 17px; }
   button.big {
     margin-top: 20px;
     font-size: 24px;
@@ -408,6 +409,12 @@
   // =========================================================
   var MAX_SPEED = 1.15;
   var MIN_SPAWN_DELAY = 500;
+
+  // Anti-mashing guardrails: stop players who just hammer keys hoping to
+  // rack up points by chance instead of actually typing.
+  var MISTAKE_STREAK_LIMIT = 5; // 5 wrong keystrokes in a row ends the game
+  var MIN_KEYSTROKES_FOR_ACCURACY_CHECK = 10; // don't judge accuracy on a tiny sample
+  var MIN_ACCURACY = 0.9; // below 90% keystroke accuracy ends the game
   var NUM_LANES = 3;
   var LANE_X = [30, 50, 70]; // percent of road width at the player's position
   var OBSTACLE_CHANCE = 0.25;
@@ -650,8 +657,40 @@
     lockedItem: null,
     running: false,
     lastTime: null,
-    spawnTimeout: null
+    spawnTimeout: null,
+    totalKeystrokes: 0,
+    correctKeystrokes: 0,
+    mistakeStreak: 0
   };
+
+  // Tracks every keystroke that tries to act on a target — matched letters,
+  // wrong letters on a locked word, stray keys, and obstacle key presses
+  // (Space/Shift) — so rapid random key-mashing can't farm points forever.
+  // Returns true if the game was ended as a result of this keystroke.
+  function recordKeystroke(isCorrect) {
+    state.totalKeystrokes++;
+    if (isCorrect) {
+      state.correctKeystrokes++;
+      state.mistakeStreak = 0;
+    } else {
+      state.mistakeStreak++;
+    }
+
+    if (state.mistakeStreak >= MISTAKE_STREAK_LIMIT) {
+      endGame("Game over — too many mistakes in a row. Slow down and type each letter carefully!");
+      return true;
+    }
+
+    if (state.totalKeystrokes >= MIN_KEYSTROKES_FOR_ACCURACY_CHECK) {
+      var keystrokeAccuracy = state.correctKeystrokes / state.totalKeystrokes;
+      if (keystrokeAccuracy < MIN_ACCURACY) {
+        endGame("Game over — accuracy dropped below 90%. Focus on typing correctly, not just fast!");
+        return true;
+      }
+    }
+
+    return false;
+  }
 
   function pickWord(list) { return list[Math.floor(Math.random() * list.length)]; }
   function currentLevel() { return levels[Math.min(state.levelIndex, levels.length - 1)]; }
@@ -828,7 +867,7 @@
     if (state.lives <= 0) endGame();
   }
 
-  function endGame() {
+  function endGame(reason) {
     state.running = false;
     stopTimers();
     clearAllActive();
@@ -843,7 +882,8 @@
     if (isNewBest) setHighScore(levelIdx, state.score);
     var bestLine = isNewBest ? "New High Score for this level!" : "Best for this level: " + prevBest;
 
-    finalStats.innerHTML = "Score: " + state.score +
+    var reasonHtml = reason ? '<div class="end-reason">' + reason + "</div>" : "";
+    finalStats.innerHTML = reasonHtml + "Score: " + state.score +
       " | Top speed reached: " + Math.round(state.currentSpeed * 100) +
       " | Accuracy: " + accuracy + "%<br>" +
       "Accuracy-Adjusted Score: " + accuracyAdjustedScore + "<br>" + bestLine;
@@ -889,6 +929,7 @@
   function tryAdvanceWord(item, key) {
     var expected = item.text[item.typed];
     if (key.toLowerCase() === expected.toLowerCase()) {
+      if (recordKeystroke(true)) return; // game ended (shouldn't happen on a correct key, but stay safe)
       item.typed++;
       item.boxEl.querySelector(".word-text").innerHTML = renderWordText(item.text, item.typed);
       applyProgressColor(item);
@@ -897,6 +938,7 @@
       item.boxEl.classList.remove("shake");
       void item.boxEl.offsetWidth;
       item.boxEl.classList.add("shake");
+      recordKeystroke(false); // caller checks state.running before touching this item again
     }
   }
 
@@ -916,10 +958,12 @@
               return null;
             })();
         if (match) {
+          if (recordKeystroke(true)) return;
           match.cleared = true;
           completeItem(match);
         } else {
           bumpCar(type.kind === "jump" ? "hop" : type.kind === "shiftLeft" ? "swerveLeft" : "swerveRight");
+          recordKeystroke(false); // Space/Shift pressed with nothing on screen to clear
         }
         return;
       }
@@ -936,7 +980,11 @@
     var candidates = state.activeItems.filter(function (it) {
       return (it.kind === "letter" || it.kind === "word") && it.typed === 0 && it.text[0].toLowerCase() === key.toLowerCase();
     });
-    if (candidates.length === 0) return;
+    if (candidates.length === 0) {
+      recordKeystroke(false); // stray keystroke that matches nothing on screen
+      return;
+    }
+    if (!state.running) return; // recordKeystroke may have just ended the game
 
     candidates.sort(function (a, b) { return a.d - b.d; }); // smallest d = closest to the car = most urgent
     var chosen = candidates[0];
@@ -979,6 +1027,9 @@
     state.currentSpeed = level.baseSpeed;
     state.totalCorrect = 0;
     state.totalMissed = 0;
+    state.totalKeystrokes = 0;
+    state.correctKeystrokes = 0;
+    state.mistakeStreak = 0;
     state.lastTime = null;
     state.running = true;
     stopTimers();
