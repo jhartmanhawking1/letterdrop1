@@ -110,6 +110,7 @@
   }
   .overlay h1 { font-size: 42px; margin-bottom: 6px; text-shadow: 0 2px 4px rgba(0,0,0,0.4); }
   .overlay p.sub { font-size: 18px; margin: 4px 0 20px; max-width: 600px; opacity: 0.9; }
+  .end-reason { font-weight: 700; color: #ffd166; margin-bottom: 8px; font-size: 17px; }
   button.big {
     margin-top: 20px;
     font-size: 24px;
@@ -306,6 +307,9 @@
     ALLOWED_DOMAIN: "hawkingcharter.org",
     APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw0RKEoNRVFnjw08bt3pu2tN1Gpk0d7g-vXgIF6rTCOOwztWow8e2tNPdDbMJvml1NGDg/exec"
   };
+  // Tags every score this game submits so it stays separate from other
+  // games sharing the same Sheet/Apps Script backend.
+  var GAME_TAG = "letterDrop";
   var leaderboardConfigured =
     LEADERBOARD_CONFIG.GOOGLE_CLIENT_ID.indexOf("PASTE-YOUR") === -1 &&
     LEADERBOARD_CONFIG.APPS_SCRIPT_URL.indexOf("PASTE-YOUR") === -1;
@@ -380,6 +384,12 @@
   // =========================================================
   var MAX_SPEED = 650;
   var MIN_SPAWN_DELAY = 320;
+
+  // Anti-mashing guardrails: stop players who just hammer the home-row keys
+  // hoping to rack up points by chance instead of actually typing.
+  var MISTAKE_STREAK_LIMIT = 5; // 5 wrong keystrokes in a row ends the game
+  var MIN_KEYSTROKES_FOR_ACCURACY_CHECK = 10; // don't judge accuracy on a tiny sample
+  var MIN_ACCURACY = 0.9; // below 90% keystroke accuracy ends the game
 
   var levels = [
     {
@@ -609,6 +619,7 @@
     var level = levels[levelIdx];
     var payload = {
       idToken: authState.idToken,
+      game: GAME_TAG,
       levelIndex: levelIdx,
       levelLabel: level.label,
       score: score,
@@ -664,7 +675,7 @@
     }
     leaderboardList.innerHTML = "<p>Loading...</p>";
     var url = LEADERBOARD_CONFIG.APPS_SCRIPT_URL +
-      "?action=leaderboard&level=" + currentLbLevel + "&sort=" + currentLbSort + "&limit=10";
+      "?action=leaderboard&game=" + GAME_TAG + "&level=" + currentLbLevel + "&sort=" + currentLbSort + "&limit=10";
     fetch(url)
       .then(function (r) { return r.json(); })
       .then(function (data) { renderLeaderboard(data.entries); })
@@ -762,8 +773,40 @@
     lockedItem: null,
     running: false,
     lastTime: null,
-    spawnTimeout: null
+    spawnTimeout: null,
+    totalKeystrokes: 0,
+    correctKeystrokes: 0,
+    mistakeStreak: 0
   };
+
+  // Tracks every keystroke that actually tries to hit a target (both the
+  // stray keystrokes that match nothing and the wrong-letter keystrokes on a
+  // locked target), so rapid random key-mashing can't farm points forever.
+  // Returns true if the game was ended as a result of this keystroke.
+  function recordKeystroke(isCorrect) {
+    state.totalKeystrokes++;
+    if (isCorrect) {
+      state.correctKeystrokes++;
+      state.mistakeStreak = 0;
+    } else {
+      state.mistakeStreak++;
+    }
+
+    if (state.mistakeStreak >= MISTAKE_STREAK_LIMIT) {
+      endGame("Game over — too many mistakes in a row. Slow down and type each letter carefully!");
+      return true;
+    }
+
+    if (state.totalKeystrokes >= MIN_KEYSTROKES_FOR_ACCURACY_CHECK) {
+      var keystrokeAccuracy = state.correctKeystrokes / state.totalKeystrokes;
+      if (keystrokeAccuracy < MIN_ACCURACY) {
+        endGame("Game over — accuracy dropped below 90%. Focus on typing correctly, not just fast!");
+        return true;
+      }
+    }
+
+    return false;
+  }
 
   function pickWord(list) {
     return list[Math.floor(Math.random() * list.length)];
@@ -909,7 +952,7 @@
     // climbing until lives run out, so the run reflects their true ceiling.
   }
 
-  function endGame() {
+  function endGame(reason) {
     state.running = false;
     stopTimers();
     clearAllActive();
@@ -927,7 +970,8 @@
       ? "New High Score for this level!"
       : "Best for this level: " + prevBest;
 
-    finalStats.innerHTML = "Score: " + state.score +
+    var reasonHtml = reason ? '<div class="end-reason">' + reason + "</div>" : "";
+    finalStats.innerHTML = reasonHtml + "Score: " + state.score +
       " | Top speed reached: " + Math.round(state.currentSpeed) +
       " | Accuracy: " + accuracy + "%<br>" +
       "Accuracy-Adjusted Score: " + accuracyAdjustedScore + "<br>" + bestLine;
@@ -961,6 +1005,7 @@
   function tryAdvance(item, key) {
     var expected = item.text[item.typed];
     if (key.toLowerCase() === expected.toLowerCase()) {
+      if (recordKeystroke(true)) return; // game ended (shouldn't happen on a correct key, but stay safe)
       item.typed++;
       item.el.querySelector(".word-text").innerHTML = renderText(item.text, item.typed);
       if (item.typed >= item.text.length) {
@@ -970,6 +1015,7 @@
       item.el.classList.remove("shake");
       void item.el.offsetWidth;
       item.el.classList.add("shake");
+      recordKeystroke(false); // caller checks state.running before touching this item again
     }
   }
 
@@ -989,7 +1035,11 @@
     var candidates = state.activeItems.filter(function (it) {
       return it.typed === 0 && it.text[0].toLowerCase() === key.toLowerCase();
     });
-    if (candidates.length === 0) return; // stray keystroke, ignore
+    if (candidates.length === 0) {
+      recordKeystroke(false); // stray keystroke that matches nothing on screen
+      return;
+    }
+    if (!state.running) return; // recordKeystroke may have just ended the game
 
     // Prefer the most urgent one (closest to the ground).
     candidates.sort(function (a, b) { return b.y - a.y; });
@@ -1034,6 +1084,9 @@
     state.currentSpeed = level.baseSpeed;
     state.totalCorrect = 0;
     state.totalMissed = 0;
+    state.totalKeystrokes = 0;
+    state.correctKeystrokes = 0;
+    state.mistakeStreak = 0;
     state.lastTime = null;
     state.running = true;
     stopTimers();
