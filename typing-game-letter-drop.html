@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Road Racer - Typing Practice</title>
+<title>Letter Drop - Typing Practice</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   * { box-sizing: border-box; }
@@ -15,56 +15,11 @@
   #game {
     position: relative;
     width: 100%; height: 100vh;
+    background: linear-gradient(to bottom, #7ec8f2 0%, #b9e6ff 55%, #cdf2c8 56%, #9fdb8e 100%);
     overflow: hidden;
-    background: linear-gradient(to bottom,
-      #7ec8f2 0%, #b9e6ff 21%,
-      #6fbf5a 22%, #5aa848 100%);
+    transition: background 0.4s ease;
   }
-  #sun {
-    position: absolute; top: 6%; left: 50%; transform: translateX(-50%);
-    width: 60px; height: 60px; border-radius: 50%;
-    background: radial-gradient(circle, #fff6c9 0%, #ffe066 70%, #ffd166 100%);
-    box-shadow: 0 0 30px rgba(255,224,102,0.6);
-    z-index: 1;
-  }
-  #road {
-    position: absolute; left: 0; bottom: 0; width: 100%; height: 79%;
-    background: #5a5a63;
-    clip-path: polygon(41% 0%, 59% 0%, 96% 100%, 4% 100%);
-    z-index: 2;
-  }
-  #roadLine {
-    position: absolute; left: 50%; bottom: 0; width: 8px; height: 79%;
-    transform: translateX(-50%);
-    background: repeating-linear-gradient(to bottom, #f4e04d 0 5%, transparent 5% 10%);
-    clip-path: polygon(46% 0%, 54% 0%, 90% 100%, 10% 100%);
-    opacity: 0.85;
-    z-index: 3;
-  }
-  #car {
-    position: absolute; left: 50%; bottom: 3%;
-    transform: translateX(-50%);
-    font-size: 56px;
-    z-index: 10;
-    transition: transform 0.15s ease;
-    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));
-  }
-  #car.hop { animation: hop 0.3s ease; }
-  #car.swerveLeft { animation: swerveLeft 0.3s ease; }
-  #car.swerveRight { animation: swerveRight 0.3s ease; }
-  @keyframes hop {
-    0%,100% { transform: translateX(-50%) translateY(0) scale(1); }
-    40% { transform: translateX(-50%) translateY(-26px) scale(1.05); }
-  }
-  @keyframes swerveLeft {
-    0%,100% { transform: translateX(-50%) rotate(0deg); }
-    40% { transform: translateX(-85%) rotate(-12deg); }
-  }
-  @keyframes swerveRight {
-    0%,100% { transform: translateX(-50%) rotate(0deg); }
-    40% { transform: translateX(-15%) rotate(12deg); }
-  }
-
+  .decor-el { position: absolute; z-index: 1; pointer-events: none; }
   #hud {
     position: absolute; top: 0; left: 0; width: 100%;
     display: flex; justify-content: space-between; align-items: center;
@@ -73,12 +28,13 @@
     z-index: 20;
   }
   #hud .pill {
-    background: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.75);
     border-radius: 20px;
     padding: 6px 16px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     pointer-events: none;
   }
+  #accuracyPill.low-accuracy { background: rgba(255,120,120,0.9); color: #5a0000; font-weight: 700; }
   #hud .left-group, #hud .right-group { display: flex; gap: 10px; align-items: center; }
   #menuBtn {
     font-size: 16px; font-weight: bold; color: #24425c;
@@ -88,7 +44,6 @@
   #menuBtn:hover { background: #fff; }
   #lives { color: #e0455f; letter-spacing: 3px; }
   #speedPill { color: #b5560f; }
-  #accuracyPill.low-accuracy { background: rgba(255,120,120,0.9); color: #5a0000; font-weight: 700; }
 
   #toolbar {
     position: absolute; top: 62px; right: 12px;
@@ -103,89 +58,49 @@
   }
   .toolbar-btn:hover { background: #fff; }
 
-  #authArea { margin: 4px 0 18px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-  #gsiButtonContainer { display: inline-block; }
-  .auth-hint { font-size: 13px; opacity: 0.85; margin: 0; max-width: 420px; }
-  #signedInView {
-    display: none; align-items: center; gap: 10px;
-    background: rgba(255,255,255,0.85); border-radius: 20px;
-    padding: 8px 16px; color: #24425c; font-weight: bold; font-size: 15px;
+  #ground {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 60px;
+    background: #6bbf59; border-top: 4px dashed #4d8f3f;
+    z-index: 2;
+    transition: background 0.4s ease, border-color 0.4s ease;
   }
-  #signOutBtn {
-    font-size: 12px; font-weight: bold; color: #24425c;
-    background: rgba(0,0,0,0.08); border: none; border-radius: 14px;
-    padding: 4px 10px; cursor: pointer;
-  }
-  #signOutBtn:hover { background: rgba(0,0,0,0.16); }
 
-  .lb-select-row {
-    display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; justify-content: center;
-  }
-  #lbLevelSelect {
-    font-size: 15px; padding: 6px 10px; border-radius: 10px; border: none; font-weight: bold;
-  }
-  .lb-sort-btn {
-    font-size: 13px; font-weight: bold; padding: 6px 14px; border-radius: 14px;
-    border: none; cursor: pointer; background: rgba(255,255,255,0.75); color: #24425c;
-  }
-  .lb-sort-btn.active { background: #ffd166; }
-  #leaderboardList {
-    width: 100%; max-width: 460px; max-height: 300px; overflow-y: auto;
-    background: rgba(255,255,255,0.15); border-radius: 14px; padding: 6px 10px;
-    margin-bottom: 10px;
-  }
-  .lb-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,0.2); font-size: 15px;
-  }
-  .lb-row:last-child { border-bottom: none; }
-  .lb-rank { width: 32px; font-weight: bold; opacity: 0.8; }
-  .lb-name { flex: 1; text-align: left; }
-  .lb-score, .lb-aascore { width: 76px; text-align: right; font-weight: bold; }
-  .lb-header { opacity: 0.75; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-
-  .approaching {
+  .falling {
     position: absolute;
-    left: 50%; top: 20%;
-    transform: translate(-50%, -50%) scale(0.3);
-    z-index: 5;
-    white-space: nowrap;
-    pointer-events: none;
-  }
-  .item-box {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    top: -60px;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
     padding: 8px 16px;
-    border-radius: 14px;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    font-size: 36px;
     font-weight: bold;
-    font-size: 34px;
-    border: 5px solid #d94f4f;
-    background: rgba(233,110,110,0.35);
-    color: #40200f;
-    transition: border-color 0.1s linear, background-color 0.1s linear;
+    color: #2b3a55;
+    white-space: nowrap;
+    border: 4px solid #ffd166;
   }
-  .item-box .word-text .typed { color: #1c5c2e; text-shadow: 0 0 2px rgba(255,255,255,0.6); }
-  .item-box.obstacle {
-    font-size: 20px;
-    padding: 10px 22px;
-    min-width: 140px;
-    text-align: center;
-    color: #fff;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  .falling .shape-emoji { font-size: 28px; line-height: 1; }
+  .falling .word-text .typed { color: #35b56a; }
+  .falling.locked {
+    border-color: #35b56a;
+    box-shadow: 0 0 14px rgba(53,181,106,0.85), 0 4px 10px rgba(0,0,0,0.25);
   }
-  .item-box.shake { animation: itemShake 0.15s; }
-  @keyframes itemShake {
+  .falling.shake { animation: shake 0.15s; }
+  @keyframes shake {
     0%,100% { transform: translateX(0); }
     25% { transform: translateX(-6px); }
     75% { transform: translateX(6px); }
   }
-
-  #crashFlash {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(217, 60, 60, 0.35);
-    z-index: 15; opacity: 0; pointer-events: none;
+  .pop { animation: pop 0.35s forwards; }
+  @keyframes pop {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.6); opacity: 0; }
   }
-  #crashFlash.show { animation: flash 0.4s ease; }
-  @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
 
   .overlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -195,7 +110,7 @@
     padding: 20px;
   }
   .overlay h1 { font-size: 42px; margin-bottom: 6px; text-shadow: 0 2px 4px rgba(0,0,0,0.4); }
-  .overlay p.sub { font-size: 18px; margin: 4px 0 20px; max-width: 640px; opacity: 0.9; }
+  .overlay p.sub { font-size: 18px; margin: 4px 0 20px; max-width: 600px; opacity: 0.9; }
   .end-reason { font-weight: 700; color: #ffd166; margin-bottom: 8px; font-size: 17px; }
   button.big {
     margin-top: 20px;
@@ -244,8 +159,8 @@
   }
 
   #levelBanner {
-    position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%);
-    font-size: 46px; color: #fff; font-weight: bold;
+    position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 50px; color: #fff; font-weight: bold;
     text-shadow: 0 3px 6px rgba(0,0,0,0.4);
     z-index: 25; opacity: 0; pointer-events: none;
     text-align: center;
@@ -259,20 +174,56 @@
     100% { opacity: 0; }
   }
   #targetHint {
-    position: absolute; bottom: 14%; left: 50%; transform: translateX(-50%);
-    font-size: 18px; color: #24425c; background: rgba(255,255,255,0.75);
+    position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%);
+    font-size: 20px; color: #24425c; background: rgba(255,255,255,0.7);
     padding: 6px 16px; border-radius: 16px; z-index: 15;
-    white-space: nowrap;
   }
+
+  #authArea { margin: 4px 0 18px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  #gsiButtonContainer { display: inline-block; }
+  .auth-hint { font-size: 13px; opacity: 0.85; margin: 0; max-width: 420px; }
+  #signedInView {
+    display: none; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.85); border-radius: 20px;
+    padding: 8px 16px; color: #24425c; font-weight: bold; font-size: 15px;
+  }
+  #signOutBtn {
+    font-size: 12px; font-weight: bold; color: #24425c;
+    background: rgba(0,0,0,0.08); border: none; border-radius: 14px;
+    padding: 4px 10px; cursor: pointer;
+  }
+  #signOutBtn:hover { background: rgba(0,0,0,0.16); }
+  .wrong-domain-note { font-size: 13px; color: #ffe1e1; max-width: 420px; margin: 0; }
+
+  .lb-select-row {
+    display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; justify-content: center;
+  }
+  #lbLevelSelect {
+    font-size: 15px; padding: 6px 10px; border-radius: 10px; border: none; font-weight: bold;
+  }
+  .lb-sort-btn {
+    font-size: 13px; font-weight: bold; padding: 6px 14px; border-radius: 14px;
+    border: none; cursor: pointer; background: rgba(255,255,255,0.75); color: #24425c;
+  }
+  .lb-sort-btn.active { background: #ffd166; }
+  #leaderboardList {
+    width: 100%; max-width: 460px; max-height: 300px; overflow-y: auto;
+    background: rgba(255,255,255,0.15); border-radius: 14px; padding: 6px 10px;
+    margin-bottom: 10px;
+  }
+  .lb-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,0.2); font-size: 15px;
+  }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-rank { width: 32px; font-weight: bold; opacity: 0.8; }
+  .lb-name { flex: 1; text-align: left; }
+  .lb-score, .lb-aascore { width: 76px; text-align: right; font-weight: bold; }
+  .lb-header { opacity: 0.75; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
 </style>
 </head>
 <body>
 <div id="game">
-  <div id="sun"></div>
-  <div id="road"></div>
-  <div id="roadLine"></div>
-  <div id="crashFlash"></div>
-
   <div id="hud">
     <div class="left-group">
       <button id="menuBtn">☰ Choose Level</button>
@@ -287,16 +238,18 @@
   </div>
 
   <div id="toolbar">
+    <button id="bgBtn" class="toolbar-btn">🎨 Background</button>
+    <button id="shapeBtn" class="toolbar-btn">🦖 Shape</button>
     <button id="leaderboardBtn" class="toolbar-btn">🏆 Leaderboard</button>
   </div>
 
   <div id="levelBanner"></div>
   <div id="targetHint"></div>
-  <div id="car">🚗</div>
+  <div id="ground"></div>
 
   <div class="overlay" id="levelSelectScreen">
-    <h1>Road Racer</h1>
-    <p class="sub">Letters and words grow bigger as you drive toward them — type them before they reach you to turn them green and drive on through! Watch for SPACE (jump) and SHIFT (swerve) blocks too.</p>
+    <h1>Letter Drop</h1>
+    <p class="sub">Choose a level. Each one starts slow and speeds up (with more falling at once) the longer you last. Use the buttons in the corner to change the background and the falling shapes!</p>
 
     <div id="authArea">
       <div id="signedOutView">
@@ -313,7 +266,7 @@
   </div>
 
   <div class="overlay" id="gameOverScreen" style="display:none;">
-    <h1>Nice Driving!</h1>
+    <h1>Nice Try!</h1>
     <p class="sub" id="finalStats"></p>
     <p class="sub" id="submitStatus" style="font-size:15px; margin-top:0;"></p>
     <div id="btnRow">
@@ -344,17 +297,21 @@
 (function () {
   // =========================================================
   // CLASS LEADERBOARD CONFIG
-  // Shares the same Google Sheet / Apps Script backend as Letter Drop —
-  // just reuse the same Client ID and Apps Script URL from that file.
-  // GAME_TAG keeps this game's scores separate from Letter Drop's even
-  // though they're both stored in the same sheet.
+  // Fill these in once you've followed the setup guide:
+  //   1. GOOGLE_CLIENT_ID  — OAuth Client ID from Google Cloud Console
+  //   2. APPS_SCRIPT_URL   — the /exec URL of your deployed Apps Script
+  // Until both are filled in, the leaderboard/sign-in UI quietly
+  // disables itself and the game works exactly as before (local
+  // high scores only).
   // =========================================================
   var LEADERBOARD_CONFIG = {
     GOOGLE_CLIENT_ID: "334444019921-16rcf5jleptom8k7cb115qvjiee4h68b.apps.googleusercontent.com",
     ALLOWED_DOMAIN: "hawkingcharter.org",
     APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw0RKEoNRVFnjw08bt3pu2tN1Gpk0d7g-vXgIF6rTCOOwztWow8e2tNPdDbMJvml1NGDg/exec"
   };
-  var GAME_TAG = "roadRacer";
+  // Tags every score this game submits so it stays separate from other
+  // games sharing the same Sheet/Apps Script backend.
+  var GAME_TAG = "letterDrop";
   var leaderboardConfigured =
     LEADERBOARD_CONFIG.GOOGLE_CLIENT_ID.indexOf("PASTE-YOUR") === -1 &&
     LEADERBOARD_CONFIG.APPS_SCRIPT_URL.indexOf("PASTE-YOUR") === -1;
@@ -363,7 +320,8 @@
   // SIGHT WORD LIST (placeholder — Dolch 2nd grade list).
   // Replace this array with your class's official word list.
   // Words are auto-sorted into easy/mixed/hard buckets below
-  // based on which letters they contain.
+  // based on which letters they contain, so any list you drop
+  // in here will automatically slot into levels 4-6.
   // =========================================================
   var sightWords = [
     "always","around","because","been","before","best","both","buy",
@@ -373,6 +331,11 @@
     "very","wash","which","why","wish","work","would","write","your"
   ];
 
+  // =========================================================
+  // KEY TIERS — home row first, then frequent keys, then the
+  // rarer keys. Used for both single-letter levels and to
+  // auto-grade sight word difficulty.
+  // =========================================================
   var TIER_HOME = ["a","s","d","f","j","k","l"];
   var TIER_FREQUENT = ["e","r","t","n","i","o","h","g","u"];
   var TIER_REMAINING = ["b","c","m","p","q","v","w","x","y","z"];
@@ -384,11 +347,15 @@
     if (TIER_FREQUENT.indexOf(ch) !== -1) return 1;
     return 2;
   }
+
   function wordDifficulty(word) {
     var max = 0;
-    for (var i = 0; i < word.length; i++) max = Math.max(max, letterTierIndex(word[i]));
+    for (var i = 0; i < word.length; i++) {
+      max = Math.max(max, letterTierIndex(word[i]));
+    }
     return max;
   }
+
   function bucketWords(list) {
     var easy = [], hard = [];
     list.forEach(function (w) {
@@ -400,57 +367,133 @@
     if (hard.length < 4) hard = list.slice();
     return { easy: easy, mixed: list.slice(), hard: hard };
   }
+
   var wordBuckets = bucketWords(sightWords);
 
   // =========================================================
   // LEVEL CONFIG
-  //   baseSpeed = 1 / (seconds to travel from horizon to car)
-  //   growth    = multiplier on speed after every correct clear
-  //   baseSpawnInterval = starting delay (ms) between spawns
-  //   maxConcurrent = lanes available for letters/words (fixed at 3)
+  //   baseSpeed        = starting fall speed (pixels/second)
+  //   growth           = multiplier applied to speed after every
+  //                      correct hit, so play gets steadily faster
+  //                      within a level until it's no longer possible
+  //                      to keep up — that's the player's high score
+  //                      moment for that level.
+  //   baseSpawnInterval = starting delay (ms) between spawns. This
+  //                      shrinks as currentSpeed climbs, so new
+  //                      letters/words appear more often as things
+  //                      speed up — multiple can be on screen together.
+  //   maxConcurrent     = most items allowed on screen at once.
   // =========================================================
-  var MAX_SPEED = 1.15;
-  var MIN_SPAWN_DELAY = 500;
+  var MAX_SPEED = 650;
+  var MIN_SPAWN_DELAY = 320;
 
-  // Anti-mashing guardrails: stop players who just hammer keys hoping to
-  // rack up points by chance instead of actually typing.
+  // Anti-mashing guardrails: stop players who just hammer the home-row keys
+  // hoping to rack up points by chance instead of actually typing.
   var MISTAKE_STREAK_LIMIT = 5; // 5 wrong keystrokes in a row ends the game
   var MIN_KEYSTROKES_FOR_ACCURACY_CHECK = 10; // don't judge accuracy on a tiny sample
   var MIN_ACCURACY = 0.9; // below 90% keystroke accuracy ends the game
-  var NUM_LANES = 3;
-  var LANE_X = [30, 50, 70]; // percent of road width at the player's position
-  var OBSTACLE_CHANCE = 0.25;
 
   var levels = [
-    { type: "letter", pool: TIER_HOME, baseSpeed: 1/7.0, growth: 1.05, baseSpawnInterval: 1500, maxConcurrent: NUM_LANES, label: "Home Row", keysLabel: TIER_HOME.join(" ").toUpperCase() },
-    { type: "letter", pool: TIER_HOME.concat(TIER_FREQUENT), baseSpeed: 1/5.5, growth: 1.05, baseSpawnInterval: 1400, maxConcurrent: NUM_LANES, label: "Home Row + Frequent Keys", keysLabel: "Adds " + TIER_FREQUENT.join(" ").toUpperCase() },
-    { type: "letter", pool: FULL_ALPHABET, baseSpeed: 1/4.3, growth: 1.05, baseSpawnInterval: 1300, maxConcurrent: NUM_LANES, label: "All Letters", keysLabel: "Adds " + TIER_REMAINING.join(" ").toUpperCase() },
-    { type: "word", tier: "easy", baseSpeed: 1/6.5, growth: 1.045, baseSpawnInterval: 1900, maxConcurrent: NUM_LANES, label: "Easy Sight Words", keysLabel: "Words using home row + frequent letters" },
-    { type: "word", tier: "mixed", baseSpeed: 1/5.2, growth: 1.045, baseSpawnInterval: 1800, maxConcurrent: NUM_LANES, label: "Mixed Sight Words", keysLabel: "All sight words" },
-    { type: "word", tier: "hard", baseSpeed: 1/4.3, growth: 1.045, baseSpawnInterval: 1700, maxConcurrent: NUM_LANES, label: "Challenge Words", keysLabel: "Longer words with rarer letters" }
+    {
+      type: "letter", pool: TIER_HOME, baseSpeed: 30, growth: 1.055,
+      baseSpawnInterval: 1400, maxConcurrent: 4,
+      label: "Home Row", keysLabel: TIER_HOME.join(" ").toUpperCase()
+    },
+    {
+      type: "letter", pool: TIER_HOME.concat(TIER_FREQUENT), baseSpeed: 40, growth: 1.055,
+      baseSpawnInterval: 1300, maxConcurrent: 4,
+      label: "Home Row + Frequent Keys", keysLabel: "Adds " + TIER_FREQUENT.join(" ").toUpperCase()
+    },
+    {
+      type: "letter", pool: FULL_ALPHABET, baseSpeed: 50, growth: 1.055,
+      baseSpawnInterval: 1200, maxConcurrent: 5,
+      label: "All Letters", keysLabel: "Adds " + TIER_REMAINING.join(" ").toUpperCase()
+    },
+    {
+      type: "word", tier: "easy", baseSpeed: 35, growth: 1.05,
+      baseSpawnInterval: 1900, maxConcurrent: 3,
+      label: "Easy Sight Words", keysLabel: "Words using home row + frequent letters"
+    },
+    {
+      type: "word", tier: "mixed", baseSpeed: 42, growth: 1.05,
+      baseSpawnInterval: 1800, maxConcurrent: 3,
+      label: "Mixed Sight Words", keysLabel: "All sight words"
+    },
+    {
+      type: "word", tier: "hard", baseSpeed: 50, growth: 1.05,
+      baseSpawnInterval: 1700, maxConcurrent: 4,
+      label: "Challenge Words", keysLabel: "Longer words with rarer letters"
+    }
   ];
 
-  var OBSTACLE_TYPES = [
-    { kind: "jump", label: "SPACE\n⬆ JUMP", color: "#e08a2b", keyMatches: function (e) { return e.code === "Space"; } },
-    { kind: "shiftLeft", label: "⬅ SHIFT", color: "#3a7bd5", keyMatches: function (e) { return e.code === "ShiftLeft"; } },
-    { kind: "shiftRight", label: "SHIFT ➡", color: "#8a5fd6", keyMatches: function (e) { return e.code === "ShiftRight"; } }
+  // =========================================================
+  // VISUAL THEMES — backgrounds and falling shapes are purely
+  // cosmetic and don't affect gameplay/scoring. Students cycle
+  // through them with the toolbar buttons; the choice is saved
+  // so it's still there next time.
+  // =========================================================
+  var BACKGROUNDS = [
+    { name: "Sunny Sky", sky: "linear-gradient(to bottom, #7ec8f2 0%, #b9e6ff 55%, #cdf2c8 56%, #9fdb8e 100%)", ground: "#6bbf59", groundBorder: "#4d8f3f", decor: "clouds", decorColor: "rgba(255,255,255,0.85)" },
+    { name: "Night Sky", sky: "linear-gradient(to bottom, #0b1636 0%, #1b2a5e 55%, #142838 56%, #0d1f2b 100%)", ground: "#1f3b2f", groundBorder: "#12241c", decor: "stars", decorColor: "#fdf6c8" },
+    { name: "Under the Sea", sky: "linear-gradient(to bottom, #0f6fa8 0%, #2696c9 55%, #0b4f73 56%, #073a54 100%)", ground: "#0b4f73", groundBorder: "#073a54", decor: "bubbles", decorColor: "rgba(255,255,255,0.65)" },
+    { name: "Sunset", sky: "linear-gradient(to bottom, #ff8a5c 0%, #ffb17a 40%, #a85c8a 70%, #4a3a6b 100%)", ground: "#5b4570", groundBorder: "#3a2c4a", decor: "stars", decorColor: "#ffe6b3" },
+    { name: "Candy Land", sky: "linear-gradient(to bottom, #ffd6e8 0%, #ffe9c7 55%, #c9f7d1 56%, #a0e8b0 100%)", ground: "#f7a8c4", groundBorder: "#e685ab", decor: "clouds", decorColor: "rgba(255,255,255,0.9)" }
   ];
 
-  var HIGH_SCORE_PREFIX = "roadRacerHighScore_";
-  var memoryScores = {};
+  var SHAPES = [
+    { name: "Classic", emoji: "" },
+    { name: "Chicken", emoji: "\u{1F414}" },
+    { name: "Egg", emoji: "\u{1F95A}" },
+    { name: "Parachute", emoji: "\u{1FA82}" },
+    { name: "Axolotl", emoji: "\u{1FAB6}" },
+    { name: "Rocket", emoji: "\u{1F680}" },
+    { name: "Balloon", emoji: "\u{1F388}" },
+    { name: "Dinosaur", emoji: "\u{1F996}" },
+    { name: "Donut", emoji: "\u{1F369}" },
+    { name: "Star", emoji: "\u{2B50}" }
+  ];
+
+  var THEME_PREFIX = "letterDropTheme_";
+
+  function loadThemeIndex(key, fallback, max) {
+    try {
+      var v = window.localStorage.getItem(THEME_PREFIX + key);
+      var n = v !== null ? parseInt(v, 10) : fallback;
+      if (isNaN(n) || n < 0 || n >= max) return fallback;
+      return n;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function saveThemeIndex(key, value) {
+    try {
+      window.localStorage.setItem(THEME_PREFIX + key, String(value));
+    } catch (e) { /* ignore if unavailable */ }
+  }
+
+  var HIGH_SCORE_PREFIX = "letterDropHighScore_";
+  var memoryScores = {}; // fallback if localStorage is unavailable
+
   function getHighScore(levelIdx) {
     try {
       var v = window.localStorage.getItem(HIGH_SCORE_PREFIX + levelIdx);
       return v ? parseInt(v, 10) : 0;
-    } catch (e) { return memoryScores[levelIdx] || 0; }
+    } catch (e) {
+      return memoryScores[levelIdx] || 0;
+    }
   }
+
   function setHighScore(levelIdx, value) {
-    try { window.localStorage.setItem(HIGH_SCORE_PREFIX + levelIdx, String(value)); }
-    catch (e) { memoryScores[levelIdx] = value; }
+    try {
+      window.localStorage.setItem(HIGH_SCORE_PREFIX + levelIdx, String(value));
+    } catch (e) {
+      memoryScores[levelIdx] = value;
+    }
   }
 
   var game = document.getElementById("game");
-  var car = document.getElementById("car");
+  var ground = document.getElementById("ground");
   var levelNumEl = document.getElementById("levelNum");
   var scoreEl = document.getElementById("score");
   var speedValEl = document.getElementById("speedVal");
@@ -463,7 +506,8 @@
   var gameOverScreen = document.getElementById("gameOverScreen");
   var finalStats = document.getElementById("finalStats");
   var levelGrid = document.getElementById("levelGrid");
-  var crashFlash = document.getElementById("crashFlash");
+  var bgBtn = document.getElementById("bgBtn");
+  var shapeBtn = document.getElementById("shapeBtn");
   var leaderboardBtn = document.getElementById("leaderboardBtn");
   var signedOutView = document.getElementById("signedOutView");
   var signedInView = document.getElementById("signedInView");
@@ -476,6 +520,10 @@
   var lbSortScoreBtn = document.getElementById("lbSortScore");
   var lbSortAccuracyBtn = document.getElementById("lbSortAccuracy");
 
+  var bgIndex = loadThemeIndex("bg", 0, BACKGROUNDS.length);
+  var shapeIndex = loadThemeIndex("shape", 0, SHAPES.length);
+  var currentShape = SHAPES[shapeIndex];
+
   // =========================================================
   // GOOGLE SIGN-IN + LEADERBOARD
   // =========================================================
@@ -484,19 +532,25 @@
   var currentLbSort = "score"; // "score" or "accuracyAdjusted"
 
   function escapeHtml(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
   }
 
   function decodeJwtPayload(token) {
     try {
       var base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
       var json = decodeURIComponent(
-        atob(base64).split("").map(function (c) {
-          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join("")
+        atob(base64)
+          .split("")
+          .map(function (c) { return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2); })
+          .join("")
       );
       return JSON.parse(json);
-    } catch (e) { return null; }
+    } catch (e) {
+      return null;
+    }
   }
 
   function updateAuthUi() {
@@ -558,7 +612,10 @@
   }
 
   function submitScoreToLeaderboard(levelIdx, score, accuracyAdjustedScore, accuracy, topSpeed) {
-    if (!leaderboardConfigured) { submitStatus.textContent = ""; return; }
+    if (!leaderboardConfigured) {
+      submitStatus.textContent = "";
+      return;
+    }
     if (!authState.idToken || !authState.domainOk) {
       submitStatus.textContent = "Sign in from the level-select screen to save scores to the leaderboard.";
       return;
@@ -649,6 +706,65 @@
     loadLeaderboard();
   }
 
+  function addDecor(theme) {
+    var old = game.querySelectorAll(".decor-el");
+    for (var i = 0; i < old.length; i++) old[i].remove();
+
+    var type = theme.decor;
+    var color = theme.decorColor;
+    var count = type === "stars" ? 30 : (type === "bubbles" ? 10 : 4);
+
+    for (var n = 0; n < count; n++) {
+      var el = document.createElement("div");
+      el.className = "decor-el";
+      if (type === "clouds") {
+        var w = 80 + Math.random() * 60, h = w * 0.5;
+        el.style.width = w + "px";
+        el.style.height = h + "px";
+        el.style.top = (5 + Math.random() * 30) + "%";
+        el.style.left = (Math.random() * 80) + "%";
+        el.style.background = color;
+        el.style.borderRadius = "50px";
+      } else if (type === "stars") {
+        var s = 2 + Math.random() * 3;
+        el.style.width = s + "px";
+        el.style.height = s + "px";
+        el.style.top = (Math.random() * 70) + "%";
+        el.style.left = (Math.random() * 95) + "%";
+        el.style.background = color;
+        el.style.borderRadius = "50%";
+        el.style.opacity = String(0.5 + Math.random() * 0.5);
+        el.style.boxShadow = "0 0 4px " + color;
+      } else if (type === "bubbles") {
+        var d = 12 + Math.random() * 28;
+        el.style.width = d + "px";
+        el.style.height = d + "px";
+        el.style.top = (10 + Math.random() * 70) + "%";
+        el.style.left = (Math.random() * 90) + "%";
+        el.style.border = "2px solid " + color;
+        el.style.borderRadius = "50%";
+        el.style.background = "rgba(255,255,255,0.12)";
+      }
+      game.appendChild(el);
+    }
+  }
+
+  function applyBackground(idx) {
+    var theme = BACKGROUNDS[idx];
+    game.style.background = theme.sky;
+    ground.style.background = theme.ground;
+    ground.style.borderTopColor = theme.groundBorder;
+    addDecor(theme);
+    bgBtn.textContent = "🎨 " + theme.name;
+    saveThemeIndex("bg", idx);
+  }
+
+  function applyShape(idx) {
+    currentShape = SHAPES[idx];
+    shapeBtn.textContent = (currentShape.emoji || "⬜") + " " + currentShape.name;
+    saveThemeIndex("shape", idx);
+  }
+
   var state = {
     levelIndex: 0,
     startLevelIndex: 0,
@@ -667,9 +783,9 @@
     mistakeStreak: 0
   };
 
-  // Tracks every keystroke that tries to act on a target — matched letters,
-  // wrong letters on a locked word, stray keys, and obstacle key presses
-  // (Space/Shift) — so rapid random key-mashing can't farm points forever.
+  // Tracks every keystroke that actually tries to hit a target (both the
+  // stray keystrokes that match nothing and the wrong-letter keystrokes on a
+  // locked target), so rapid random key-mashing can't farm points forever.
   // Returns true if the game was ended as a result of this keystroke.
   function recordKeystroke(isCorrect) {
     state.totalKeystrokes++;
@@ -697,14 +813,22 @@
     return false;
   }
 
-  function pickWord(list) { return list[Math.floor(Math.random() * list.length)]; }
-  function currentLevel() { return levels[Math.min(state.levelIndex, levels.length - 1)]; }
-  function wordPoolFor(level) { return wordBuckets[level.tier] || wordBuckets.mixed; }
+  function pickWord(list) {
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  function currentLevel() {
+    return levels[Math.min(state.levelIndex, levels.length - 1)];
+  }
+
+  function wordPoolFor(level) {
+    return wordBuckets[level.tier] || wordBuckets.mixed;
+  }
 
   function updateHud() {
     levelNumEl.textContent = state.levelIndex + 1;
     scoreEl.textContent = state.score;
-    speedValEl.textContent = Math.round(state.currentSpeed * 100);
+    speedValEl.textContent = Math.round(state.currentSpeed);
 
     // Live keystroke accuracy (counts every keystroke, including strays and
     // wrong letters) — this is the same number the 90%-floor guard checks,
@@ -729,102 +853,73 @@
   }
 
   function stopTimers() {
-    if (state.spawnTimeout) { clearTimeout(state.spawnTimeout); state.spawnTimeout = null; }
+    if (state.spawnTimeout) {
+      clearTimeout(state.spawnTimeout);
+      state.spawnTimeout = null;
+    }
   }
 
-  function renderWordText(text, typedCount) {
+  function renderText(text, typedCount) {
     var html = "";
     for (var i = 0; i < text.length; i++) {
-      html += (i < typedCount) ? '<span class="typed">' + text[i] + "</span>" : text[i];
+      if (i < typedCount) {
+        html += '<span class="typed">' + text[i] + "</span>";
+      } else {
+        html += text[i];
+      }
     }
     return html;
   }
 
-  // Interpolates from red (t=0) to green (t=1)
-  function colorForProgress(t) {
-    t = Math.max(0, Math.min(1, t));
-    var r1 = 217, g1 = 79, b1 = 79;   // red
-    var r2 = 46, g2 = 138, b2 = 74;   // green
-    var r = Math.round(r1 + (r2 - r1) * t);
-    var g = Math.round(g1 + (g2 - g1) * t);
-    var b = Math.round(b1 + (b2 - b1) * t);
-    return "rgb(" + r + "," + g + "," + b + ")";
-  }
-
-  function applyProgressColor(item) {
-    var frac = item.kind === "letter" || item.kind === "word"
-      ? item.typed / item.text.length
-      : (item.cleared ? 1 : 0);
-    var borderColor = colorForProgress(frac);
-    item.boxEl.style.borderColor = borderColor;
-    item.boxEl.style.backgroundColor = colorForProgress(frac * 0.6).replace("rgb", "rgba").replace(")", ",0.35)");
-  }
-
-  function pickFreeLane() {
-    var occupied = state.activeItems.filter(function (it) { return it.kind === "letter" || it.kind === "word"; })
-      .map(function (it) { return it.lane; });
-    var free = [];
-    for (var i = 0; i < NUM_LANES; i++) if (occupied.indexOf(i) === -1) free.push(i);
-    return free.length ? free[Math.floor(Math.random() * free.length)] : Math.floor(Math.random() * NUM_LANES);
-  }
-
-  function spawnWordItem() {
+  function spawnItem() {
+    if (!state.running) return;
     var level = currentLevel();
     var text = level.type === "letter" ? pickWord(level.pool) : pickWord(wordPoolFor(level));
-    var lane = pickFreeLane();
 
-    var wrap = document.createElement("div");
-    wrap.className = "approaching";
-    var box = document.createElement("div");
-    box.className = "item-box";
-    box.innerHTML = '<span class="word-text">' + renderWordText(text, 0) + "</span>";
-    wrap.appendChild(box);
-    game.appendChild(wrap);
+    var el = document.createElement("div");
+    el.className = "falling";
+    var emojiHtml = currentShape.emoji
+      ? '<span class="shape-emoji">' + currentShape.emoji + "</span>"
+      : "";
+    el.innerHTML = emojiHtml + '<span class="word-text">' + renderText(text, 0) + "</span>";
 
-    var item = {
-      kind: level.type, text: text, typed: 0, d: 1, speed: state.currentSpeed,
-      lane: lane, el: wrap, boxEl: box
-    };
+    var gameWidth = game.clientWidth || 800;
+    var maxConcurrent = level.maxConcurrent;
+    var laneWidth = gameWidth / maxConcurrent;
+
+    var occupied = state.activeItems.map(function (it) { return it.lane; });
+    var freeLanes = [];
+    for (var i = 0; i < maxConcurrent; i++) {
+      if (occupied.indexOf(i) === -1) freeLanes.push(i);
+    }
+    var lane = freeLanes.length
+      ? freeLanes[Math.floor(Math.random() * freeLanes.length)]
+      : Math.floor(Math.random() * maxConcurrent);
+
+    var approxWidth = Math.max(70, text.length * 26 + 40);
+    var slack = Math.max(0, laneWidth - approxWidth - 8);
+    var x = lane * laneWidth + 4 + Math.random() * slack;
+
+    el.style.left = Math.max(4, x) + "px";
+    el.style.top = "-70px";
+
+    game.appendChild(el);
+
+    var item = { el: el, text: text, typed: 0, y: -70, speed: state.currentSpeed, lane: lane };
     state.activeItems.push(item);
-    applyProgressColor(item);
-    return item;
-  }
-
-  function spawnObstacleItem() {
-    var type = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)];
-    var wrap = document.createElement("div");
-    wrap.className = "approaching";
-    var box = document.createElement("div");
-    box.className = "item-box obstacle";
-    box.style.background = type.color;
-    box.style.borderColor = "#d94f4f";
-    box.textContent = type.label;
-    wrap.appendChild(box);
-    game.appendChild(wrap);
-
-    var item = {
-      kind: type.kind, cleared: false, d: 1, speed: state.currentSpeed,
-      lane: 1, el: wrap, boxEl: box, obstacleType: type
-    };
-    state.activeItems.push(item);
-    return item;
   }
 
   function computeSpawnDelay(level) {
-    var ratio = level.baseSpeed / Math.max(0.01, state.currentSpeed);
-    return Math.max(MIN_SPAWN_DELAY, level.baseSpawnInterval * ratio);
+    var ratio = level.baseSpeed / Math.max(1, state.currentSpeed);
+    var delay = level.baseSpawnInterval * ratio;
+    return Math.max(MIN_SPAWN_DELAY, delay);
   }
 
   function spawnLoopTick() {
     if (!state.running) return;
     var level = currentLevel();
-    var wordCount = state.activeItems.filter(function (it) { return it.kind === "letter" || it.kind === "word"; }).length;
-    var obstacleCount = state.activeItems.filter(function (it) { return it.kind !== "letter" && it.kind !== "word"; }).length;
-
-    if (obstacleCount === 0 && Math.random() < OBSTACLE_CHANCE) {
-      spawnObstacleItem();
-    } else if (wordCount < level.maxConcurrent) {
-      spawnWordItem();
+    if (state.activeItems.length < level.maxConcurrent) {
+      spawnItem();
     }
     state.spawnTimeout = setTimeout(spawnLoopTick, computeSpawnDelay(level));
   }
@@ -841,46 +936,36 @@
     state.lockedItem = null;
   }
 
-  function bumpCar(className) {
-    car.classList.remove("hop", "swerveLeft", "swerveRight");
-    void car.offsetWidth;
-    car.classList.add(className);
-    setTimeout(function () { car.classList.remove(className); }, 320);
-  }
-
-  function completeItem(item) {
+  function correctHit(item) {
     var level = currentLevel();
-    var points;
-    if (item.kind === "letter") points = 10;
-    else if (item.kind === "word") points = 10 + item.text.length * 3;
-    else points = 8;
+    item.el.classList.add("pop");
 
+    var points = level.type === "letter" ? 10 : (10 + item.text.length * 3);
     state.score += points;
     state.totalCorrect++;
+
+    // Ramp the difficulty up after every correct hit — faster fall speed
+    // AND (via computeSpawnDelay) more frequent spawns.
     state.currentSpeed = Math.min(MAX_SPEED, state.currentSpeed * level.growth);
 
-    if (item.kind === "jump") bumpCar("hop");
-    else if (item.kind === "shiftLeft") bumpCar("swerveLeft");
-    else if (item.kind === "shiftRight") bumpCar("swerveRight");
-
-    item.boxEl.style.borderColor = colorForProgress(1);
-    item.boxEl.style.backgroundColor = "rgba(46,138,74,0.4)";
     removeItem(item);
-    var el = item.el;
-    setTimeout(function () { el.remove(); }, 200);
+    setTimeout(function () { item.el.remove(); }, 350);
+
     updateHud();
   }
 
-  function crashItem(item) {
+  function missHit(item) {
     item.el.remove();
     removeItem(item);
     state.lives--;
     state.totalMissed++;
-    crashFlash.classList.remove("show");
-    void crashFlash.offsetWidth;
-    crashFlash.classList.add("show");
     updateHud();
-    if (state.lives <= 0) endGame();
+
+    if (state.lives <= 0) {
+      endGame();
+    }
+    // Speed/spawn-rate never reset after a miss — the ramp keeps
+    // climbing until lives run out, so the run reflects their true ceiling.
   }
 
   function endGame(reason) {
@@ -896,11 +981,14 @@
     var prevBest = getHighScore(levelIdx);
     var isNewBest = state.score > prevBest;
     if (isNewBest) setHighScore(levelIdx, state.score);
-    var bestLine = isNewBest ? "New High Score for this level!" : "Best for this level: " + prevBest;
+
+    var bestLine = isNewBest
+      ? "New High Score for this level!"
+      : "Best for this level: " + prevBest;
 
     var reasonHtml = reason ? '<div class="end-reason">' + reason + "</div>" : "";
     finalStats.innerHTML = reasonHtml + "Score: " + state.score +
-      " | Top speed reached: " + Math.round(state.currentSpeed * 100) +
+      " | Top speed reached: " + Math.round(state.currentSpeed) +
       " | Accuracy: " + accuracy + "%<br>" +
       "Accuracy-Adjusted Score: " + accuracyAdjustedScore + "<br>" + bestLine;
 
@@ -915,86 +1003,53 @@
     var dt = (timestamp - state.lastTime) / 1000;
     state.lastTime = timestamp;
 
+    var groundY = (game.clientHeight || 600) - 60 - 90;
     var items = state.activeItems.slice();
     for (var i = 0; i < items.length; i++) {
       if (!state.running) break;
       var it = items[i];
-      it.d -= it.speed * dt;
-      var t = 1 - Math.max(0, it.d);
-      var ease = t * t;
-      var scale = 0.3 + 1.4 * ease;
-      var yPct = 20 + (80 - 20) * ease;
-      var laneX = (it.kind === "letter" || it.kind === "word") ? LANE_X[it.lane] : 50;
-      var xPct = 50 + (laneX - 50) * ease;
-
-      it.el.style.left = xPct + "%";
-      it.el.style.top = yPct + "%";
-      it.el.style.transform = "translate(-50%, -50%) scale(" + scale.toFixed(3) + ")";
-
-      if (it.d <= 0) {
-        var done = (it.kind === "letter" || it.kind === "word")
-          ? it.typed >= it.text.length
-          : it.cleared;
-        if (done) completeItem(it); else crashItem(it);
+      it.y += it.speed * dt;
+      it.el.style.top = it.y + "px";
+      if (it.y >= groundY) {
+        missHit(it);
       }
     }
 
     requestAnimationFrame(gameLoop);
   }
 
-  function tryAdvanceWord(item, key) {
+  function tryAdvance(item, key) {
     var expected = item.text[item.typed];
     if (key.toLowerCase() === expected.toLowerCase()) {
       if (recordKeystroke(true)) return; // game ended (shouldn't happen on a correct key, but stay safe)
       item.typed++;
-      item.boxEl.querySelector(".word-text").innerHTML = renderWordText(item.text, item.typed);
-      applyProgressColor(item);
-      if (item.typed >= item.text.length) completeItem(item);
+      item.el.querySelector(".word-text").innerHTML = renderText(item.text, item.typed);
+      if (item.typed >= item.text.length) {
+        correctHit(item);
+      }
     } else {
-      item.boxEl.classList.remove("shake");
-      void item.boxEl.offsetWidth;
-      item.boxEl.classList.add("shake");
+      item.el.classList.remove("shake");
+      void item.el.offsetWidth;
+      item.el.classList.add("shake");
       recordKeystroke(false); // caller checks state.running before touching this item again
     }
   }
 
   function handleKey(e) {
     if (!state.running) return;
-
-    // Obstacle keys first — these never conflict with letter matching.
-    for (var i = 0; i < OBSTACLE_TYPES.length; i++) {
-      var type = OBSTACLE_TYPES[i];
-      if (type.keyMatches(e)) {
-        e.preventDefault();
-        var match = state.activeItems.find ? state.activeItems.find(function (it) { return it.kind === type.kind && !it.cleared; })
-          : (function () {
-              for (var j = 0; j < state.activeItems.length; j++) {
-                if (state.activeItems[j].kind === type.kind && !state.activeItems[j].cleared) return state.activeItems[j];
-              }
-              return null;
-            })();
-        if (match) {
-          if (recordKeystroke(true)) return;
-          match.cleared = true;
-          completeItem(match);
-        } else {
-          bumpCar(type.kind === "jump" ? "hop" : type.kind === "shiftLeft" ? "swerveLeft" : "swerveRight");
-          recordKeystroke(false); // Space/Shift pressed with nothing on screen to clear
-        }
-        return;
-      }
-    }
-
     var key = e.key;
     if (key.length !== 1) return;
 
     if (state.lockedItem) {
-      tryAdvanceWord(state.lockedItem, key);
+      tryAdvance(state.lockedItem, key);
       return;
     }
 
+    // No locked target yet — find falling items whose first letter
+    // matches this keystroke, so several words can be on screen and
+    // the player can start typing whichever one they choose.
     var candidates = state.activeItems.filter(function (it) {
-      return (it.kind === "letter" || it.kind === "word") && it.typed === 0 && it.text[0].toLowerCase() === key.toLowerCase();
+      return it.typed === 0 && it.text[0].toLowerCase() === key.toLowerCase();
     });
     if (candidates.length === 0) {
       recordKeystroke(false); // stray keystroke that matches nothing on screen
@@ -1002,10 +1057,12 @@
     }
     if (!state.running) return; // recordKeystroke may have just ended the game
 
-    candidates.sort(function (a, b) { return a.d - b.d; }); // smallest d = closest to the car = most urgent
+    // Prefer the most urgent one (closest to the ground).
+    candidates.sort(function (a, b) { return b.y - a.y; });
     var chosen = candidates[0];
     state.lockedItem = chosen;
-    tryAdvanceWord(chosen, key);
+    chosen.el.classList.add("locked");
+    tryAdvance(chosen, key);
   }
 
   function buildLevelGrid() {
@@ -1030,7 +1087,7 @@
     clearAllActive();
     gameOverScreen.style.display = "none";
     leaderboardScreen.style.display = "none";
-    buildLevelGrid();
+    buildLevelGrid(); // refresh best-score badges
     levelSelectScreen.style.display = "flex";
   }
 
@@ -1057,16 +1114,27 @@
     updateHud();
     showLevelBanner("Level " + (levelIdx + 1) + ": " + level.label);
     targetHint.textContent = level.type === "letter"
-      ? "Type letters to turn them green — watch for SPACE and SHIFT blocks!"
-      : "Type whole words to turn them green — watch for SPACE and SHIFT blocks!";
+      ? "Type any letter you see to catch it"
+      : "Start typing any word to lock onto it";
     state.spawnTimeout = setTimeout(spawnLoopTick, 900);
     requestAnimationFrame(gameLoop);
   }
 
   document.getElementById("menuBtn").addEventListener("click", showLevelSelect);
-  document.getElementById("playAgainBtn").addEventListener("click", function () { startGame(state.startLevelIndex); });
+  document.getElementById("playAgainBtn").addEventListener("click", function () {
+    startGame(state.startLevelIndex);
+  });
   document.getElementById("chooseLevelBtn").addEventListener("click", showLevelSelect);
   document.addEventListener("keydown", handleKey);
+
+  bgBtn.addEventListener("click", function () {
+    bgIndex = (bgIndex + 1) % BACKGROUNDS.length;
+    applyBackground(bgIndex);
+  });
+  shapeBtn.addEventListener("click", function () {
+    shapeIndex = (shapeIndex + 1) % SHAPES.length;
+    applyShape(shapeIndex);
+  });
 
   document.getElementById("signOutBtn").addEventListener("click", signOut);
   leaderboardBtn.addEventListener("click", function () { openLeaderboard(currentLbLevel); });
@@ -1086,9 +1154,14 @@
     loadLeaderboard();
   });
 
+  applyBackground(bgIndex);
+  applyShape(shapeIndex);
   buildLevelGrid();
   updateHud();
   updateAuthUi();
+  if (!leaderboardConfigured) {
+    leaderboardBtn.title = "Ask your teacher to finish setting up the leaderboard";
+  }
   waitForGsi(25);
 })();
 </script>
